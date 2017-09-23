@@ -36,17 +36,36 @@ class QuestionAdminForm(forms.ModelForm):
         }
 
 
+class ChoiceForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        disabled_votes = forms.CharField(widget=forms.NumberInput(attrs={'disabled': True}))
+        disabled_choice_text = forms.CharField(widget=forms.TextInput(attrs={'disabled': True}))
+
+        super(ChoiceForm, self).__init__(*args, **kwargs)
+        if self.instance.pk:
+            question = Question.objects.get(pk=self.instance.question_id)
+            if question.state == Question.CHOICE_ACTIVE or Question.CHOICE_FINISH:
+                self.fields['choice_text'] = disabled_choice_text
+                if question.state == Question.CHOICE_FINISH:
+                    self.fields['votes'] = disabled_votes
+
+    class Meta:
+        fields = ('state', 'question_text', 'pub_date')
+
+
 class ChoiceInline(admin.TabularInline):
     model = Choice
     fields = ('choice_text', 'votes',)
     extra = 0
+    form = ChoiceForm
 
     def get_formset(self, request, obj=None, **kwargs):
         if obj:
             if obj.is_active() or obj.is_finish():
                 self.can_delete = False
                 self.max_num = 0
-                self.readonly_fields = ('choice_text',) if obj.is_active() else ('choice_text', 'votes',)
+                # self.readonly_fields = ('choice_text',) if obj.is_active() else ('choice_text', 'votes',)
         return super(ChoiceInline, self).get_formset(request, obj, **kwargs)
 
 
