@@ -39,8 +39,8 @@ class QuestionAdminForm(forms.ModelForm):
 class ChoiceForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
-        disabled_votes = forms.CharField(widget=forms.NumberInput(attrs={'disabled': True}))
-        disabled_choice_text = forms.CharField(widget=forms.TextInput(attrs={'disabled': True}))
+        disabled_votes = forms.CharField(widget=forms.NumberInput(attrs={'disabled': True}), required=False)
+        disabled_choice_text = forms.CharField(widget=forms.TextInput(attrs={'disabled': True}), required=False)
 
         super(ChoiceForm, self).__init__(*args, **kwargs)
         if self.instance.pk:
