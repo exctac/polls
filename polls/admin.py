@@ -7,6 +7,13 @@ from polls.models import Question, Choice
 
 
 class QuestionAdminForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(QuestionAdminForm, self).__init__(*args, **kwargs)
+        if self.instance.choice_set.count() >= 2:
+            if self.instance.is_finish():
+                self._meta.help_texts = ''
+            else:
+                self.fields['state'].help_text = ''
 
     def clean_state(self):
         state_initial = self.initial.get('state', None)
@@ -37,21 +44,18 @@ class QuestionAdminForm(forms.ModelForm):
 
 
 class ChoiceForm(forms.ModelForm):
-
     def __init__(self, *args, **kwargs):
-        disabled_votes = forms.CharField(widget=forms.NumberInput(attrs={'disabled': True}), required=False)
-        disabled_choice_text = forms.CharField(widget=forms.TextInput(attrs={'disabled': True}), required=False)
-
         super(ChoiceForm, self).__init__(*args, **kwargs)
         if self.instance.pk:
             question = Question.objects.get(pk=self.instance.question_id)
-            if question.state == Question.CHOICE_ACTIVE or Question.CHOICE_FINISH:
-                self.fields['choice_text'] = disabled_choice_text
+            if question.state == Question.CHOICE_ACTIVE or question.state == Question.CHOICE_FINISH:
+                self.fields['choice_text'].disabled = True
                 if question.state == Question.CHOICE_FINISH:
-                    self.fields['votes'] = disabled_votes
+                    self.fields['votes'].disabled = True
 
     class Meta:
-        fields = ('state', 'question_text', 'pub_date')
+        model = Choice
+        fields = ('choice_text', 'votes',)
 
 
 class ChoiceInline(admin.TabularInline):
@@ -65,7 +69,6 @@ class ChoiceInline(admin.TabularInline):
             if obj.is_active() or obj.is_finish():
                 self.can_delete = False
                 self.max_num = 0
-                # self.readonly_fields = ('choice_text',) if obj.is_active() else ('choice_text', 'votes',)
         return super(ChoiceInline, self).get_formset(request, obj, **kwargs)
 
 

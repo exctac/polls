@@ -11,7 +11,12 @@ class Question(models.Model):
         (CHOICE_ACTIVE, 'Активный'),
         (CHOICE_FINISH, 'Завершен'),
     )
-    state = models.IntegerField('Status', choices=CHOICES, default=CHOICE_NEW, blank=True)
+    state = models.IntegerField('Status',
+                                choices=CHOICES,
+                                default=CHOICE_NEW,
+                                # help_text='Вы сможете поменять статус Вопроса, после создания и '
+                                #           'сохранения как мимнимум 2-х вариантов ответов!'
+                                )
     question_text = models.CharField(max_length=200)
     pub_date = models.DateTimeField('date published')
 
