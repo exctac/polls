@@ -8,57 +8,46 @@ from polls.models import Question, Choice
 
 class QuestionAdminForm(forms.ModelForm):
 
-    def __init__(self, *args, **kwargs):
-        super(QuestionAdminForm, self).__init__(*args, **kwargs)
-        self.initial['text'] = ',kfsdsd'
+    def clean_state(self):
+        state_initial = self.initial.get('state', None)
+        state_cleaned = self.cleaned_data.get('state', None)
+        difference = state_cleaned - state_initial
 
-    def clean(self):
-        state_old = self.initial.get('state', None)
-        state_new = self.cleaned_data.get('state', None)
+        if difference:
+            if difference < 0:
+                raise ValidationError(
+                    'Переход к предыдущему статусу НЕ возможен, следующий допустимый статус "Завершен"',
+                    code='invalid'
+                )
+            elif difference > 1:
+                raise ValidationError(
+                    'В статус "Завершен" можно перейти только из состояния "Активный"',
+                    code='invalid'
+                )
 
-        if state_new != state_old:
-            if state_new == 'a':
-                if int(self.data['choice_set-TOTAL_FORMS']) <= 1:
-                    self.add_error(None, ValidationError(
-                        'Для перехода в состояние Активеный добавьте минимум 2 варианта выбора.',
-                        code='invalid'
-                    ))
-                if state_old != 'n':
-                    self.add_error(None, ValidationError(
-                        'В состояние Активный можно перейти только из состояния Новый.',
-                        code='invalid'
-                    ))
-
-            elif state_new == 'f':
-                if state_old != 'a':
-                    self.add_error(None, ValidationError(
-                        'В состояние Завершен можно перейти только из состояния Активный',
-                        code='invalid'
-                    ))
-
-        return super(QuestionAdminForm, self).clean()
+        return state_cleaned
 
     class Meta:
         model = Question
         fields = ('state', 'question_text', 'pub_date')
+        help_texts = {
+            'state': ('Вы сможете поменять статус Вопроса, после создания и '
+                      'сохранения как мимнимум 2-х вариантов ответов!'),
+        }
 
 
 class ChoiceInline(admin.TabularInline):
     model = Choice
+    fields = ('choice_text', 'votes',)
     extra = 0
 
     def get_formset(self, request, obj=None, **kwargs):
-        if obj and obj.state == 'f':
-            self.readonly_fields = ('choice_text', 'votes',)
-            self.can_delete = False
-            self.max_num = False
-
-        if obj and obj.state == 'a':
-            self.readonly_fields = ('choice_text',)
-            self.can_delete = False
-            self.max_num = 0
-        a = super(ChoiceInline, self).get_formset(request, obj, **kwargs)
-        return a
+        if obj:
+            if obj.is_active() or obj.is_finish():
+                self.can_delete = False
+                self.max_num = 0
+                self.readonly_fields = ('choice_text',) if obj.is_active() else ('choice_text', 'votes',)
+        return super(ChoiceInline, self).get_formset(request, obj, **kwargs)
 
 
 @admin.register(Question)
@@ -66,10 +55,10 @@ class QuestionAdmin(admin.ModelAdmin):
     inlines = (ChoiceInline,)
     form = QuestionAdminForm
     list_display = ('question_text', 'state', 'pub_date',)
-    list_editable = ('state',)
+    fields = ('state', 'pub_date', 'question_text')
+    readonly_fields = ('state',)
 
-    def get_form(self, request, obj=None, **kwargs):
-        # print(obj.)
-        if obj and obj.state == 'f':
-            self.readonly_fields = ('state', 'pub_date', 'question_text')
-        return super(QuestionAdmin, self).get_form(request, obj, **kwargs)
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.choice_set.count() >= 2:
+            return () if not obj.is_finish() else ('state', 'pub_date', 'question_text',)
+        return self.readonly_fields

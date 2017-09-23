@@ -2,29 +2,30 @@ from django.db import models
 
 
 class Question(models.Model):
-    # my code
-    CHOISE_NEW = 'n'
-    CHOISE_ACTIVE = 'a'
-    CHOISE_FINISH = 'f'
+    CHOICE_NEW = 1
+    CHOICE_ACTIVE = 2
+    CHOICE_FINISH = 3
 
-    CHOISES = (
-        (CHOISE_NEW, 'Новый'),
-        (CHOISE_ACTIVE, 'Активный'),
-        (CHOISE_FINISH, 'Завершен'),
+    CHOICES = (
+        (CHOICE_NEW, 'Новый'),
+        (CHOICE_ACTIVE, 'Активный'),
+        (CHOICE_FINISH, 'Завершен'),
     )
-    state = models.CharField('Status', max_length=255, choices=CHOISES, null=True, blank=True, default=CHOISE_NEW)
-    # my code
+    state = models.IntegerField('Status', choices=CHOICES, default=CHOICE_NEW, blank=True)
     question_text = models.CharField(max_length=200)
     pub_date = models.DateTimeField('date published')
 
+    def is_new(self):
+        return self.state == self.CHOICE_NEW
+
+    def is_active(self):
+        return self.state == self.CHOICE_ACTIVE
+
+    def is_finish(self):
+        return self.state == self.CHOICE_FINISH
+
     def __str__(self):
         return self.question_text
-
-    # def save(self, *args, **kwargs):
-    #     if not self.state:
-    #         self.state = 'n'
-    #     return super(Question, self).save(*args, **kwargs)
-
 
 
 class Choice(models.Model):

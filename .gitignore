@@ -123,5 +123,3 @@ CACHE/*
 ^htmlcov/*
 
 .coverage
-
-amigostone/media/
